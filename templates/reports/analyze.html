@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% load shield %}
+{% block title %}Check a message · ScamShield{% endblock %}
+{% block content %}
+<div class="page-head">
+  <span class="badge badge-danger">Message X-ray</span>
+  <h1 style="font-size:2rem;margin-top:10px">Paste it. We'll X-ray it.</h1>
+  <p>Paste a suspicious text, email, DM, job offer or rental listing. ScamShield highlights the manipulation tactics, pulls out every phone number, link and email inside, and checks each one against community reports. Nothing you paste is saved.</p>
+</div>
+
+<div class="split">
+  <div>
+    <form method="post" class="card">{% csrf_token %}
+      <div class="samples"><small class="muted" style="align-self:center">Try a sample:</small>
+        <a class="chip" href="?sample=job">💼 Fake job</a><a class="chip" href="?sample=cra">🏛️ CRA threat</a>
+        <a class="chip" href="?sample=rental">🏠 Rental deposit</a><a class="chip" href="?sample=bank">🏦 Bank phishing</a>
+      </div>
+      <div class="field {% if form.message.errors %}has-error{% endif %}">{{ form.message }}{{ form.message.errors }}</div>
+      <button class="btn btn-primary">Analyze message</button>
+    </form>
+
+    {% if analysis %}
+    <div class="card risk-panel tone-{{ verdict.1 }}">
+      <div class="risk">
+        {% include 'reports/_gauge.html' with score=analysis.score tone=verdict.1 %}
+        <div>
+          <span class="verdict">{{ verdict.0 }}</span>
+          <h2 style="margin-bottom:6px">{% if analysis.categories %}{{ analysis.categories|length }} manipulation tactic{{ analysis.categories|length|pluralize }} detected{% else %}No known scam patterns found{% endif %}</h2>
+          <p class="muted" style="margin:0">{% if analysis.score >= 40 %}Do not reply, click links or send money. Verify through an official channel you look up yourself.{% elif analysis.score >= 15 %}Be careful. Verify the sender independently before acting.{% else %}This doesn't match common scam scripts, but new tricks appear every day. Trust your gut.{% endif %}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><h3>Highlighted message</h3><small class="muted">Hover a highlight to see why</small></div>
+      <div class="quote">{{ highlighted }}</div>
+    </div>
+
+    {% if linked %}
+    <div class="card">
+      <h3>Contacts found inside the message</h3>
+      <div class="linked">
+        {% for l in linked %}{% with v=l.result.verdict %}
+        <div class="linked-item tone-{{ v.1 }}" style="border-left:4px solid var(--tone)">
+          <div>
+            <span class="kind muted" style="font-size:.75rem;text-transform:uppercase;font-weight:600">{{ l.kind|kind_icon }} {{ l.kind }}</span><br>
+            <code>{{ l.raw }}</code>
+            <div style="font-size:.85rem" class="muted">{{ l.result.headline }}</div>
+            {% for s in l.result.signals %}{% if s.weight %}<span class="badge badge-{% if s.level == 'danger' %}danger{% else %}warn{% endif %}" style="margin:4px 4px 0 0">{{ s.label }}</span>{% endif %}{% endfor %}
+          </div>
+          <div style="text-align:right;flex:none">
+            <span class="verdict" style="font-size:.8rem;margin:0">{{ l.result.score }}</span><br>
+            <a href="{% url 'search' %}?q={{ l.raw|urlencode }}" style="font-size:.85rem">Details →</a>
+          </div>
+        </div>
+        {% endwith %}{% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% endif %}
+  </div>
+
+  <aside class="sticky">
+    {% if analysis %}
+      {% if analysis.categories %}
+      <div class="card">
+        <h3>Tactics detected</h3>
+        <div class="cat-bars">
+          {% for c, n in analysis.categories.items %}
+            <div class="cat-bar"><span>{{ c }}</span><b>{{ n }}</b><div class="track"><i style="width:{% widthratio n 3 100 %}%"></i></div></div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      {% if analysis.tips %}
+      <div class="card"><h3>What to know</h3><ul class="tips">{% for t in analysis.tips %}<li>{{ t }}</li>{% endfor %}</ul></div>
+      {% endif %}
+      {% if analysis.score >= 15 %}
+      <div class="card">
+        <h3>Help the next person</h3>
+        <p class="muted" style="font-size:.9rem">Turn this into a community report in one click. We'll pre-fill it for you.</p>
+        <a class="btn btn-primary btn-block" href="{% url 'report_create' %}?identifier={% if linked %}{{ linked.0.raw|urlencode }}{% endif %}&description={{ analysis.text|urlencode }}">Report this message</a>
+      </div>
+      {% endif %}
+    {% else %}
+      <div class="card">
+        <h3>What we look for</h3>
+        <ul class="tips">
+          <li>Urgency, threats and secrecy</li>
+          <li>Gift cards, crypto and "pay first" fees</li>
+          <li>CRA, RCMP and bank impersonation</li>
+          <li>Look-alike links like paypa1 or rbc-secure-login</li>
+          <li>Overseas "one-ring" area codes</li>
+          <li>Rental and job scam scripts</li>
+        </ul>
+      </div>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

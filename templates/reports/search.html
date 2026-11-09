@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% load shield humanize %}
+{% block title %}{% if q %}{{ q }} · {% endif %}Search · ScamShield{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1 style="font-size:2rem">{% if q %}Results for <span style="color:var(--red)">{{ q }}</span>{% else %}Search reports{% endif %}</h1>
+  <form method="get" class="searchbox" style="margin-top:12px;max-width:none">
+    <div style="position:relative">
+      <div style="display:flex;background:#fff;border-radius:14px;padding:6px;box-shadow:var(--shadow);border:1px solid var(--line)">
+        <input id="q" name="q" type="search" value="{{ q }}" placeholder="Phone, website, email or name…" autocomplete="off" style="border:0;font-size:1.05rem" data-live="live-panel">
+        <button class="btn btn-primary">Search</button>
+      </div>
+      <div id="live-panel" class="live"></div>
+    </div>
+    <div class="filters" style="margin-top:12px">
+      {{ form.type }} {{ form.status }} {{ form.sort }}
+      <button class="btn btn-ghost btn-sm">Apply filters</button>
+      {% if request.GET.type or request.GET.status or request.GET.sort %}<a href="?q={{ q|urlencode }}" class="btn btn-sm" style="color:var(--slate)">Reset</a>{% endif %}
+    </div>
+  </form>
+</div>
+
+{% if result %}
+  {% with v=result.verdict %}
+  <div class="card risk-panel tone-{{ v.1 }}" style="margin-bottom:24px">
+    <div class="risk">
+      {% include 'reports/_gauge.html' with score=result.score tone=v.1 %}
+      <div>
+        <span class="verdict">{{ v.0 }}</span>
+        <h2 style="margin-bottom:6px">{{ result.headline }}</h2>
+        <p class="muted" style="margin-bottom:12px">
+          {{ result.kind|kind_icon }} Detected as <b>{{ result.kind }}</b>{% if result.normalized != q|lower %}: matched as <code>{% if result.kind == 'phone' %}{{ result.normalized|pretty_phone }}{% else %}{{ result.normalized }}{% endif %}</code>{% endif %}
+          · checked {{ result.lookups }} time{{ result.lookups|pluralize }} on ScamShield
+          {% if result.total_lost %}· <b style="color:var(--red)">${{ result.total_lost|floatformat:0|intcomma }} reported lost</b>{% endif %}
+        </p>
+        {% include 'reports/_signals.html' with signals=result.signals %}
+        <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+          <a class="btn btn-primary" href="{% url 'report_create' %}?identifier={{ q|urlencode }}">{% if result.exact %}I was targeted too{% else %}Report this{% endif %}</a>
+          <button class="btn btn-ghost" data-share data-title="ScamShield check" data-text="Heads up: I checked {{ q }} on ScamShield and it came back '{{ v.0 }}' (risk {{ result.score }}/100)." data-url="{{ request.build_absolute_uri }}">Warn a friend</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endwith %}
+{% endif %}
+
+<div class="section-title" style="margin-top:0"><h2>{% if q %}{{ total }} matching report{{ total|pluralize }}{% else %}All reports ({{ total }}){% endif %}</h2>
+  {% if exact_ids %}<small><span class="badge badge-danger">exact match</span> outlined in red</small>{% endif %}</div>
+{% if page.object_list %}
+  <div class="grid grid-2">{% for r in page.object_list %}{% include 'reports/_report_card.html' %}{% endfor %}</div>
+  {% include 'reports/_pagination.html' %}
+{% else %}
+  <div class="card empty">
+    <div class="big">🔍</div>
+    <p><b>No reports match{% if q %} "{{ q }}"{% endif %}.</b><br>That doesn't make it safe. Scammers change numbers and sites often.</p>
+    <a class="btn btn-dark" href="{% url 'analyze' %}">Paste the message instead</a>
+  </div>
+{% endif %}
+{% endblock %}

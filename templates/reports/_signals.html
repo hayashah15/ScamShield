@@ -1,0 +1,5 @@
+{% if signals %}
+<ul class="signals">
+  {% for s in signals %}<li class="{{ s.level }}"><span class="dot"></span><div><b>{{ s.label }}</b>{{ s.detail }}</div></li>{% endfor %}
+</ul>
+{% endif %}
