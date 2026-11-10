@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% load shield humanize %}
+{% block title %}{{ person.username }} · ScamShield{% endblock %}
+{% block content %}
+<div class="split">
+  <div>
+    <div class="card" style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">
+      <span class="avatar lg">{{ person|initials }}</span>
+      <div style="flex:1">
+        <h1 style="font-size:1.8rem;margin:0">{{ person.username }}</h1>
+        <p class="muted" style="margin:2px 0 8px">{% if person.profile.city %}📍 {{ person.profile.city }} · {% endif %}Member since {{ person.profile.joined|date:'F Y' }}</p>
+        {% if person.profile.bio %}<p style="margin:0">{{ person.profile.bio }}</p>{% endif %}
+      </div>
+      <div style="text-align:center"><div style="font-size:2.2rem">{{ person.profile.badge.emoji }}</div><b>{{ person.profile.badge.name }}</b></div>
+    </div>
+    <div class="stats" style="margin-top:18px">
+      <div class="stat accent"><span class="num">{{ person.profile.reputation }}</span><span class="lbl">reputation</span></div>
+      <div class="stat"><span class="num">{{ reports.count }}</span><span class="lbl">reports</span></div>
+      <div class="stat"><span class="num">{{ confirmed }}</span><span class="lbl">confirmed</span></div>
+      <div class="stat"><span class="num">{{ votes_cast }}</span><span class="lbl">votes cast</span></div>
+    </div>
+    <div class="section-title"><h2>Reports by {{ person.username }}</h2></div>
+    {% if reports %}<div class="grid grid-2">{% for r in reports %}{% include 'reports/_report_card.html' %}{% endfor %}</div>
+    {% else %}<div class="card empty">No reports yet.</div>{% endif %}
+  </div>
+  <aside class="sticky">
+    {% with nb=person.profile.next_badge %}{% if nb %}
+    <div class="card"><h3>Next badge: {{ nb.emoji }} {{ nb.name }}</h3>
+      <div class="progress"><i style="width:{{ nb.progress }}%"></i></div>
+      <small class="muted">{{ nb.needed }} more reputation needed</small></div>
+    {% endif %}{% endwith %}
+    <div class="card"><h3>How reputation works</h3>
+      <ul style="margin:0;padding-left:18px;font-size:.9rem;display:grid;gap:4px">
+        <li>+5 for each report</li><li>+15 when the community confirms it</li><li>−5 if it's disputed</li><li>+1 per vote, +2 per comment</li>
+      </ul></div>
+    {% if form %}
+    <form method="post" class="card">{% csrf_token %}<h3>Edit profile</h3>
+      {% for field in form %}{% include '_field.html' %}{% endfor %}
+      <button class="btn btn-dark btn-sm">Save</button></form>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

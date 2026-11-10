@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% load shield humanize %}
+
+{% block hero %}
+<section class="hero">
+  <div class="wrap">
+    <span class="badge badge-warn" style="margin-bottom:14px">Community scam checker for Canada</span>
+    <h1>Is it a scam? <em>Check before you trust.</em></h1>
+    <p class="lede">Look up a phone number, website, email or landlord name. See what other people reported, with evidence, before you reply or pay.</p>
+    <div class="searchbox">
+      <form action="{% url 'search' %}" method="get" role="search">
+        <label for="q" class="sr-only">Search</label>
+        <input id="q" name="q" type="search" placeholder="Phone, website, email or name…" autocomplete="off" data-live="live-panel" autofocus>
+        <button class="btn btn-primary">Search</button>
+      </form>
+      <div id="live-panel" class="live" aria-live="polite"></div>
+      <div class="hint">
+        <span>Results appear as you type · press <span class="kbd">/</span> to search anywhere</span>
+        <span>Try: <a href="{% url 'search' %}?q=437-555-0142">437-555-0142</a> · <a href="{% url 'search' %}?q=paypa1-secure.com">paypa1-secure.com</a> · <a href="{% url 'search' %}?q=cra.refund.dept@gmail.com">cra.refund.dept@gmail.com</a></span>
+      </div>
+    </div>
+    {% if recent_searches %}
+    <div class="chips" style="margin-top:22px;align-items:center">
+      <small style="color:#9fb1c4">Your recent searches:</small>
+      {% for s in recent_searches|slice:":5" %}<a class="chip" href="{% url 'search' %}?q={{ s.q|urlencode }}">{{ s.kind|kind_icon }} {{ s.q|truncatechars:28 }}</a>{% endfor %}
+      <form method="post" action="{% url 'clear_history' %}" style="display:inline">{% csrf_token %}<button class="chip" style="cursor:pointer">✕ Clear</button></form>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<div class="stats">
+  <div class="stat accent"><span class="num" data-count="{{ totals.reports }}">{{ totals.reports }}</span><span class="lbl">community reports</span></div>
+  <div class="stat"><span class="num" data-count="{{ totals.confirmed }}">{{ totals.confirmed }}</span><span class="lbl">confirmed by votes</span></div>
+  <div class="stat"><span class="num" data-count="{{ totals.lost|floatformat:0 }}" data-prefix="$">${{ totals.lost|floatformat:0|intcomma }}</span><span class="lbl">reported losses</span></div>
+  <div class="stat"><span class="num" data-count="{{ totals.lookups }}">{{ totals.lookups }}</span><span class="lbl">lookups made</span></div>
+</div>
+
+<div class="section-title" style="margin-top:28px"><span></span></div>
+<div class="cta-band">
+  <div>
+    <h2 style="margin:0 0 4px">Got a weird text, email or listing?</h2>
+    <p>Paste the whole message. We highlight the red flags and automatically check every number, link and email inside it.</p>
+  </div>
+  <a class="btn btn-amber" href="{% url 'analyze' %}">Check a message →</a>
+</div>
+
+<div class="split" style="margin-top:10px">
+  <div>
+    <div class="section-title"><h2>Recent reports</h2><a href="{% url 'search' %}">See all →</a></div>
+    {% if recent %}
+      <div class="grid grid-2">{% for r in recent %}{% include 'reports/_report_card.html' %}{% endfor %}</div>
+    {% else %}
+      <div class="card empty"><div class="big">🛡️</div>No reports yet. <a href="{% url 'report_create' %}">Be the first.</a></div>
+    {% endif %}
+
+    <div class="section-title"><h2>Browse by scam type</h2></div>
+    <div class="grid grid-2">
+      {% for t in types %}
+      <a class="type-tile" href="{% url 'scam_type' t.slug %}"><span class="ico">{{ t.icon }}</span><span><b>{{ t.name }}</b><small class="muted">{{ t.n }} report{{ t.n|pluralize }} · {{ t.description|truncatechars:52 }}</small></span></a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <aside>
+    <div class="section-title"><h2>Trending lookups</h2></div>
+    <div class="card">
+      {% if trending %}
+        <table class="clean"><tbody>
+        {% for t in trending %}<tr><td>{{ t.kind|kind_icon }} <a href="{% url 'search' %}?q={{ t.normalized|urlencode }}">{{ t.label|truncatechars:30 }}</a></td><td style="text-align:right" class="muted">{{ t.n }}×</td></tr>{% endfor %}
+        </tbody></table>
+        <small>Most-searched reported contacts this week.</small>
+      {% else %}<p class="muted" style="margin:0">Searches that match reports will trend here.</p>{% endif %}
+    </div>
+
+    {% if viewed %}
+    <div class="section-title"><h2>Recently viewed</h2></div>
+    <div class="list">{% for r in viewed %}{% include 'reports/_report_card.html' with compact=True %}{% endfor %}</div>
+    {% endif %}
+
+    <div class="section-title"><h2>How it works</h2></div>
+    <div class="card">
+      <ol style="margin:0;padding-left:20px;display:grid;gap:8px">
+        <li><b>Search</b> a phone, website, email or name.</li>
+        <li><b>See reports</b> with evidence and a risk score.</li>
+        <li><b>Report</b> a new scam with screenshots.</li>
+        <li><b>Verify:</b> votes move reports from <span class="badge badge-warn">Suspected</span> to <span class="badge badge-danger">Confirmed</span>.</li>
+      </ol>
+    </div>
+  </aside>
+</div>
+{% endblock %}

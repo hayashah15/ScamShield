@@ -1,0 +1,67 @@
+{% load static shield %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}ScamShield: check it before you trust it{% endblock %}</title>
+  <meta name="description" content="Community scam checker: look up a phone number, website, email or landlord before you reply or pay.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M16 2 4 7v8c0 7.5 5.1 13.4 12 15 6.9-1.6 12-7.5 12-15V7z' fill='%23E4572E'/></svg>">
+  {% block head %}{% endblock %}
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap">
+    <a href="{% url 'home' %}" class="brand" aria-label="ScamShield home">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2 4 7v8c0 7.5 5.1 13.4 12 15 6.9-1.6 12-7.5 12-15V7z" fill="#E4572E"/><path d="m11 16 3.5 3.5L21.5 12" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      ScamShield
+    </a>
+    <button class="menu-toggle" aria-label="Menu">☰</button>
+    {% with u=request.resolver_match.url_name %}
+    <nav class="nav">
+      <a href="{% url 'search' %}" class="{% if u == 'search' %}active{% endif %}">Search</a>
+      <a href="{% url 'analyze' %}" class="{% if u == 'analyze' %}active{% endif %}">Check a message</a>
+      <a href="{% url 'dashboard' %}" class="{% if u == 'dashboard' %}active{% endif %}">Dashboard</a>
+      {% if user.is_authenticated %}
+        {% if user.is_staff %}<a href="{% url 'admin:index' %}">Moderate</a>{% endif %}
+        <a href="{% url 'profile' user.username %}" title="{{ user.profile.reputation }} reputation" style="display:flex;align-items:center;gap:8px">
+          <span class="avatar">{{ user|initials }}</span><span>{{ user.profile.badge.emoji }} {{ user.profile.reputation }}</span></a>
+        <form method="post" action="{% url 'logout' %}" style="display:inline">{% csrf_token %}<button class="btn btn-sm btn-ghost" style="background:transparent;color:#DCE4EE;border-color:#33485f">Log out</button></form>
+      {% else %}
+        <a href="{% url 'login' %}?next={{ request.path|urlencode }}">Log in</a>
+      {% endif %}
+      <a href="{% url 'report_create' %}" class="btn btn-primary btn-sm">+ Report a scam</a>
+    </nav>
+    {% endwith %}
+  </div>
+</header>
+
+{% block hero %}{% endblock %}
+<main>
+  <div class="wrap">
+    {% if messages %}
+      <ul class="messages">{% for m in messages %}<li class="{{ m.tags }}">{{ m }}<button aria-label="Dismiss">×</button></li>{% endfor %}</ul>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <div>
+      <b style="color:#fff;font-family:var(--display);font-size:1.05rem">ScamShield</b><br>
+      Check it before you trust it. A Group 11 project.<br>
+      <span>{% if visit_count > 1 %}Welcome back. This is visit #{{ visit_count }} on this device.{% else %}First visit? Search anything at the top, or press <span class="kbd">/</span>.{% endif %}</span>
+    </div>
+    <div class="help-line">
+      Lost money? Contact your bank first, then report to the<br>
+      <b style="color:#fff">Canadian Anti-Fraud Centre: 1-888-495-8501</b>
+    </div>
+  </div>
+</footer>
+<script src="{% static 'js/app.js' %}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

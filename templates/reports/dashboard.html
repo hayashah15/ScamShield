@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% load shield humanize %}
+{% block title %}Dashboard · ScamShield{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1 style="font-size:2rem">Scam activity dashboard</h1>
+  <p>What the ScamShield community is seeing right now.</p>
+</div>
+
+<div class="stats">
+  <div class="stat accent"><span class="num" data-count="{{ totals.reports }}">{{ totals.reports }}</span><span class="lbl">total reports</span></div>
+  <div class="stat"><span class="num" data-count="{{ last30 }}">{{ last30 }}</span><span class="lbl">in the last 30 days</span></div>
+  <div class="stat"><span class="num" data-count="{{ totals.lost|floatformat:0 }}" data-prefix="$">${{ totals.lost|floatformat:0|intcomma }}</span><span class="lbl">reported losses (CAD)</span></div>
+  <div class="stat"><span class="num" data-count="{{ totals.lookups }}">{{ totals.lookups }}</span><span class="lbl">lookups made</span></div>
+</div>
+
+<div class="grid" style="grid-template-columns:2fr 1fr;margin-top:18px">
+  <div class="card">
+    <div class="card-title"><h3>New reports, last 30 days</h3><small class="muted">hover a bar</small></div>
+    <div class="bars">{% for d in timeline %}<div style="height:{{ d.h }}%" data-tip="{{ d.date|date:'M j' }}: {{ d.n }}"></div>{% endfor %}</div>
+    <div class="bars-axis"><span>{{ timeline.0.date|date:'M j' }}</span><span>Today</span></div>
+  </div>
+  <div class="card">
+    <h3>Verification status</h3>
+    <div class="donut" style="background:conic-gradient(var(--red) 0 {{ c_end|floatformat:2 }}%, var(--amber) 0 {{ s_end|floatformat:2 }}%, var(--mist) 0 100%)">
+      <div class="donut-center"><div><b>{{ status_counts.confirmed }}</b>confirmed</div></div>
+    </div>
+    <ul class="legend">
+      <li><i style="background:var(--red)"></i>Confirmed · {{ status_counts.confirmed }}</li>
+      <li><i style="background:var(--amber)"></i>Suspected · {{ status_counts.suspected }}</li>
+      <li><i style="background:var(--mist)"></i>Disputed · {{ status_counts.disputed }}</li>
+    </ul>
+  </div>
+</div>
+
+<div class="grid grid-2" style="margin-top:18px">
+  <div class="card">
+    <h3>Reports by scam type</h3>
+    {% for t in by_type %}
+      <div class="hbar"><a href="{% url 'scam_type' t.slug %}">{{ t.icon }} {{ t.name }}</a><div class="track"><i style="width:{{ t.pct }}%"></i></div><span class="n">{{ t.n }}</span></div>
+    {% empty %}<p class="muted">No data yet.</p>{% endfor %}
+  </div>
+  <div class="card">
+    <h3>How scammers make contact</h3>
+    {% for c in channels %}
+      <div class="hbar"><span>{{ c.label }}</span><div class="track"><i style="width:{{ c.pct }}%;background:var(--navy)"></i></div><span class="n">{{ c.n }}</span></div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="grid grid-2" style="margin-top:18px">
+  <div class="card">
+    <h3>Repeat offenders</h3>
+    <small class="muted">Contacts reported by more than one person</small>
+    {% if top_identifiers %}
+    <table class="clean" style="margin-top:8px"><thead><tr><th>Contact</th><th>Reports</th><th>Lost</th></tr></thead><tbody>
+      {% for t in top_identifiers %}<tr><td>{{ t.identifier_type|kind_icon }} <a href="{% url 'search' %}?q={{ t.normalized_identifier|urlencode }}">{{ t.label|truncatechars:32 }}</a></td><td><b>{{ t.n }}</b></td><td>${{ t.lost|floatformat:0|intcomma }}</td></tr>{% endfor %}
+    </tbody></table>
+    {% else %}<p class="muted">None yet.</p>{% endif %}
+  </div>
+  <div class="card">
+    <h3>Top guardians</h3>
+    <small class="muted">Reputation earned from accurate reports, votes and comments</small>
+    {% for u in leaders %}
+      <div class="leader"><span class="rank">{{ forloop.counter }}</span><span class="avatar">{{ u|initials }}</span>
+        <span class="grow"><a href="{% url 'profile' u.username %}"><b>{{ u.username }}</b></a><br><small class="muted">{{ u.profile.badge.emoji }} {{ u.profile.badge.name }}</small></span>
+        <b>{{ u.profile.reputation }}</b></div>
+    {% empty %}<p class="muted">No one yet.</p>{% endfor %}
+  </div>
+</div>
+
+{% if mine is not None %}
+<div class="section-title"><h2>My reports</h2><a href="{% url 'report_create' %}" class="btn btn-primary btn-sm">+ New report</a></div>
+{% if mine %}
+<div class="card" style="padding:8px 18px;overflow-x:auto">
+  <table class="clean"><thead><tr><th>Report</th><th>Status</th><th>Votes</th><th>Views</th><th>Date</th><th></th></tr></thead><tbody>
+  {% for r in mine %}<tr>
+    <td><a href="{{ r.get_absolute_url }}">{{ r.title|truncatechars:48 }}</a>{% if r.is_hidden %} <span class="badge badge-muted">removed</span>{% endif %}</td>
+    <td><span class="badge badge-{{ r.status|status_tone }}">{{ r.get_status_display }}</span></td>
+    <td>👎 {{ r.scam_votes }} · 👍 {{ r.safe_votes }}</td><td>{{ r.view_count }}</td><td>{{ r.created_at|date:'M j' }}</td>
+    <td><a href="{% url 'report_edit' r.pk %}">Edit</a></td></tr>{% endfor %}
+  </tbody></table>
+</div>
+{% else %}<div class="card empty">You haven't reported anything yet.</div>{% endif %}
+{% endif %}
+{% endblock %}

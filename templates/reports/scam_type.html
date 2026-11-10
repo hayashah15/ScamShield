@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% block title %}{{ type.name }} · ScamShield{% endblock %}
+{% block content %}
+<div class="page-head">
+  <p class="muted" style="margin-bottom:6px"><a href="{% url 'search' %}">Reports</a> / Scam types</p>
+  <h1 style="font-size:2.1rem">{{ type.icon }} {{ type.name }}</h1>
+  <p>{{ type.description }}</p>
+  <div class="chips"><span class="chip">{{ count }} report{{ count|pluralize }}</span><span class="chip" style="color:var(--red);font-weight:700">${{ lost|floatformat:0|intcomma }} reported lost</span></div>
+</div>
+<div class="split">
+  <div>
+    {% if page.object_list %}
+      <div class="grid grid-2">{% for r in page.object_list %}{% include 'reports/_report_card.html' %}{% endfor %}</div>
+      {% include 'reports/_pagination.html' %}
+    {% else %}<div class="card empty"><div class="big">{{ type.icon }}</div>No {{ type.name|lower }} reports yet.</div>{% endif %}
+  </div>
+  <aside class="sticky">
+    {% if type.tips %}<div class="card"><h3>How to spot it</h3><ul class="tips">{% for t in type.tips %}<li>{{ t }}</li>{% endfor %}</ul></div>{% endif %}
+    <a class="btn btn-primary btn-block" href="{% url 'report_create' %}">Report a {{ type.name|lower }}</a>
+  </aside>
+</div>
+{% endblock %}

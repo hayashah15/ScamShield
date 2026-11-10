@@ -1,0 +1,15 @@
+{% load shield humanize %}
+<a href="{{ r.get_absolute_url }}" class="rcard {% if r.pk in exact_ids %}exact{% endif %}">
+  <div class="top">
+    <span class="tag">{{ r.scam_type.icon }} {{ r.scam_type.name }}</span>
+    <span class="badge badge-{{ r.status|status_tone }}">{{ r.get_status_display }}</span>
+  </div>
+  <h3>{{ r.title }}</h3>
+  <span class="ident">{{ r.identifier_type|kind_icon }} {{ r.display_identifier }}</span>
+  {% if not compact %}<p class="excerpt">{{ r.description }}</p>{% endif %}
+  <div class="meta">
+    <span>👎 {{ r.scam_votes }} confirm</span>
+    {% if r.amount_lost %}<span>💸 ${{ r.amount_lost|floatformat:0|intcomma }} lost</span>{% endif %}
+    <span>{{ r.created_at|naturaltime }}</span>
+  </div>
+</a>

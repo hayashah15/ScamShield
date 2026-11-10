@@ -1,0 +1,8 @@
+{% load shield %}
+<div class="gauge tone-{{ tone }}">
+  <svg viewBox="0 0 200 115" aria-hidden="true">
+    <path d="M20 100 A80 80 0 0 1 180 100" class="track" stroke-width="18" fill="none" stroke-linecap="round"/>
+    <path d="M20 100 A80 80 0 0 1 180 100" class="fill" stroke="var(--tone)" stroke-width="18" fill="none" stroke-linecap="round" stroke-dasharray="{% gauge_dash score %}"/>
+  </svg>
+  <div class="val"><b>{{ score }}</b><span>risk score / 100</span></div>
+</div>

@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% load shield humanize %}
+{% block title %}{{ report.title }} · ScamShield{% endblock %}
+
+{% block content %}
+<p class="muted" style="margin-bottom:10px"><a href="{% url 'search' %}">Reports</a> / <a href="{% url 'scam_type' report.scam_type.slug %}">{{ report.scam_type.name }}</a> / #{{ report.pk }}</p>
+{% if report.is_hidden %}<ul class="messages"><li class="warning">This report was removed by a moderator and is only visible to you and staff.</li></ul>{% endif %}
+
+<div class="split">
+  <div>
+    <div class="card">
+      <div class="detail-head">
+        <div style="flex:1;min-width:260px">
+          <span id="status-badge" class="badge badge-{{ report.status|status_tone }}">{{ report.get_status_display }}</span>
+          {% if report.status_locked %}<span class="badge badge-muted" title="Status set by a moderator">🔒 moderator verified</span>{% endif %}
+          <h1 style="font-size:1.9rem;margin:10px 0 4px">{{ report.title }}</h1>
+          <div class="big-ident">{{ report.identifier_type|kind_icon }} {{ report.display_identifier }}
+            <button type="button" data-copy="{{ report.display_identifier }}">Copy</button></div>
+          <div class="chips">
+            <span class="chip">{{ report.scam_type.icon }} {{ report.scam_type.name }}</span>
+            <span class="chip">📨 {{ report.get_channel_display }}</span>
+            {% if report.amount_lost %}<span class="chip" style="color:var(--red);font-weight:700">💸 ${{ report.amount_lost|floatformat:2|intcomma }} lost</span>{% endif %}
+            <span class="chip">👁 {{ report.view_count }} view{{ report.view_count|pluralize }}</span>
+            {% if targeted_count %}<span class="chip">🙋 {{ targeted_count }} also targeted</span>{% endif %}
+          </div>
+        </div>
+      </div>
+      <p class="muted" style="margin:16px 0 8px;font-size:.9rem">Reported {{ report.created_at|naturaltime }} by
+        <a href="{% url 'profile' report.author.username %}">{{ report.author.username }}</a> {{ report.author.profile.badge.emoji }}</p>
+      <div class="quote">{{ highlighted }}</div>
+      {% if analysis.categories %}
+      <div class="flag-legend"><small class="muted" style="margin-right:4px">Red flags found:</small>{% for c, n in analysis.categories.items %}<span>{{ c }}{% if n > 1 %} ×{{ n }}{% endif %}</span>{% endfor %}</div>
+      {% endif %}
+      {% if can_edit %}
+      <div style="margin-top:16px;display:flex;gap:8px">
+        <a href="{% url 'report_edit' report.pk %}" class="btn btn-ghost btn-sm">Edit</a>
+        <a href="{% url 'report_delete' report.pk %}" class="btn btn-ghost btn-sm" style="color:var(--red)">Delete</a>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-title"><h2>Evidence</h2><small class="muted">{{ report.evidence.count }} file{{ report.evidence.count|pluralize }}</small></div>
+      {% if report.evidence.all %}
+        <div class="gallery">{% for e in report.evidence.all %}<a href="{{ e.image.url }}" title="{{ e.caption }}"><img src="{{ e.image.url }}" alt="{{ e.caption|default:'Evidence screenshot' }}" loading="lazy"></a>{% endfor %}</div>
+      {% else %}<p class="muted" style="margin:0">No screenshots attached.</p>{% endif %}
+    </div>
+
+    <div class="card" id="comments">
+      <div class="card-title"><h2>Discussion</h2><small class="muted">{{ comments|length }} comment{{ comments|length|pluralize }}</small></div>
+      {% for c in comments %}
+        <div class="comment">
+          <span class="avatar">{{ c.author|initials }}</span>
+          <div class="body">
+            <div class="who"><b>{{ c.author.username }}</b> {{ c.author.profile.badge.emoji }} · {{ c.created_at|naturaltime }}
+              {% if c.also_targeted %}<span class="badge badge-warn" style="margin-left:6px">contacted me too</span>{% endif %}</div>
+            <div>{{ c.body|linebreaksbr }}</div>
+          </div>
+        </div>
+      {% empty %}<p class="muted">No comments yet.</p>{% endfor %}
+      {% if user.is_authenticated %}
+        <form method="post" action="{% url 'add_comment' report.pk %}" style="margin-top:14px">{% csrf_token %}
+          <div class="field">{{ comment_form.body }}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+            <label class="checkbox" style="margin:0">{{ comment_form.also_targeted }} {{ comment_form.also_targeted.label }}</label>
+            <button class="btn btn-dark btn-sm">Post comment</button>
+          </div>
+        </form>
+      {% else %}<p style="margin-top:12px"><a href="{% url 'login' %}?next={{ request.path }}">Log in</a> to join the discussion.</p>{% endif %}
+    </div>
+  </div>
+
+  <aside class="sticky">
+    <div class="card vote-box">
+      <h3>Is this a scam?</h3>
+      <small class="muted">Votes from members decide the status. {{ report.scam_votes|add:report.safe_votes }} vote{{ report.scam_votes|add:report.safe_votes|pluralize }} so far.</small>
+      {% if user.is_authenticated and user != report.author %}
+        <form id="vote-box" method="post" action="{% url 'vote' report.pk %}">{% csrf_token %}
+          <div class="vote-btns">
+            <button name="choice" value="scam" class="vote-btn scam {% if my_vote == True %}on{% endif %}">It's a scam<span class="n">{{ report.scam_votes }}</span></button>
+            <button name="choice" value="safe" class="vote-btn safe {% if my_vote == False %}on{% endif %}">Not a scam<span class="n">{{ report.safe_votes }}</span></button>
+          </div>
+        </form>
+        <small class="muted">Click your vote again to undo it.</small>
+      {% else %}
+        <div class="vote-btns">
+          <div class="vote-btn scam">It's a scam<span class="n">{{ report.scam_votes }}</span></div>
+          <div class="vote-btn safe">Not a scam<span class="n">{{ report.safe_votes }}</span></div>
+        </div>
+        <small class="muted">{% if user == report.author %}You can't vote on your own report.{% else %}<a href="{% url 'login' %}?next={{ request.path }}">Log in</a> to vote.{% endif %}</small>
+      {% endif %}
+      <div style="margin-top:16px">
+        <div class="meter"><i id="confidence-fill" style="width:{{ report.confidence }}%"></i></div>
+        <div class="meter-label"><span>Community confidence it's a scam</span><b id="confidence-num">{{ report.confidence }}%</b></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Share a warning</h3>
+      <p class="muted" style="font-size:.9rem">Send this to a friend, roommate or group chat.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" data-share data-title="{{ report.title }}" data-text="⚠️ Scam alert: {{ report.display_identifier }} has been reported on ScamShield as a {{ report.scam_type.name|lower }}. Don't reply or pay." data-url="{{ share_url }}">Warn a friend</button>
+        <button class="btn btn-ghost btn-sm" data-copy="{{ share_url }}" data-copied="Link copied">Copy link</button>
+      </div>
+    </div>
+
+    {% if signals %}
+    <div class="card"><h3>About this {{ report.get_identifier_type_display|lower }}</h3>{% include 'reports/_signals.html' %}</div>
+    {% endif %}
+
+    {% if report.scam_type.tips %}
+    <div class="card"><h3>{{ report.scam_type.icon }} How to spot {{ report.scam_type.name|lower }}s</h3>
+      <ul class="tips">{% for t in report.scam_type.tips %}<li>{{ t }}</li>{% endfor %}</ul></div>
+    {% endif %}
+
+    {% if siblings %}
+    <div class="card"><h3>Same contact, other reports ({{ siblings|length }})</h3>
+      <div class="list">{% for r in siblings %}{% include 'reports/_report_card.html' with compact=True %}{% endfor %}</div></div>
+    {% endif %}
+    {% if similar %}
+    <div class="card"><h3>Similar scams</h3>
+      <div class="list">{% for r in similar %}{% include 'reports/_report_card.html' with compact=True %}{% endfor %}</div></div>
+    {% endif %}
+  </aside>
+</div>
+<div id="lightbox" class="lightbox"><img alt=""></div>
+{% endblock %}
