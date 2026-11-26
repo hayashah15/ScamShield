@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}{% if object %}Edit report{% else %}Report a scam{% endif %} · ScamShield{% endblock %}
+{% block content %}
+<div class="split">
+  <div>
+    <div class="page-head">
+      <h1 style="font-size:2rem">{% if object %}Edit report #{{ object.pk }}{% else %}Report a scam{% endif %}</h1>
+      <p>Your report helps the next person avoid losing money. Stick to facts, and only include the scammer's contact details.</p>
+    </div>
+    <form method="post" enctype="multipart/form-data" class="card" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<ul class="messages"><li class="danger">{{ form.non_field_errors|join:" " }}</li></ul>{% endif %}
+      <div class="form-grid">
+        {% include '_field.html' with field=form.identifier %}
+        {% include '_field.html' with field=form.identifier_type %}
+      </div>
+      <div id="dupe-alert" class="dupe-alert" style="margin:-6px 0 16px"></div>
+      {% include '_field.html' with field=form.title %}
+      <div class="form-grid">
+        {% include '_field.html' with field=form.scam_type %}
+        {% include '_field.html' with field=form.channel %}
+      </div>
+      {% include '_field.html' with field=form.description %}
+      {% include '_field.html' with field=form.amount_lost %}
+      <div class="field {% if form.evidence.errors %}has-error{% endif %}">
+        <label>Evidence screenshots <span class="muted" style="font-weight:400">(optional)</span></label>
+        <div class="dropzone">{{ form.evidence }}<div style="font-size:1.6rem">📎</div><div class="dz-label">Drop screenshots here or click to browse</div><small class="muted">PNG or JPG · up to 5 images · 5 MB each</small></div>
+        <div id="thumbs" class="thumbs"></div>
+        <div class="help">{{ form.evidence.help_text }}</div>
+        {{ form.evidence.errors }}
+        {% if object and object.evidence.all %}<div class="thumbs">{% for e in object.evidence.all %}<img src="{{ e.image.url }}" alt="">{% endfor %}</div><small class="muted">New images are added to the existing ones.</small>{% endif %}
+      </div>
+      {% include '_field.html' with field=form.confirm_truthful %}
+      <button class="btn btn-primary btn-block" style="padding:14px">{% if object %}Save changes{% else %}Publish report{% endif %}</button>
+    </form>
+  </div>
+  <aside class="sticky">
+    <div class="card">
+      <h3>What happens next?</h3>
+      <ol style="padding-left:18px;margin:0;display:grid;gap:8px;font-size:.92rem">
+        <li>Your report is public right away as <span class="badge badge-warn">Suspected</span>.</li>
+        <li>When 3+ members vote "It's a scam" (70%+ agreement) it becomes <span class="badge badge-danger">Confirmed</span>.</li>
+        <li>You earn <b>+5 reputation</b> now and <b>+15</b> more if it's confirmed.</li>
+        <li>Moderators can remove false or abusive reports.</li>
+      </ol>
+    </div>
+    <div class="card" style="background:var(--amber-bg);border-color:#f6d9a6">
+      <h3>Lost money?</h3>
+      <p style="font-size:.92rem;margin:0">Call your bank right away; e-transfers and card payments can sometimes be stopped. Then report to the Canadian Anti-Fraud Centre at <b>1-888-495-8501</b> and your local police.</p>
+    </div>
+  </aside>
+</div>
+{% endblock %}
